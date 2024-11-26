@@ -1,3 +1,7 @@
+//Archivo de estrategia de autenticacion
+
+//JwtStrategy es una estrategia de autenticacion basada en JWT,Esta construida usando Passport (middleware de autenticacion)
+
 import { Injectable, UnauthorizedException } from "@nestjs/common";
 import { envs } from "src/config";
 import { PassportStrategy } from "@nestjs/passport";
@@ -9,13 +13,16 @@ import { UserService } from "../user/user.service";
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
     constructor(private userService: UserService) {
+        //userService inyecta el servicio de usuarios para realizar consultas a la DB
         super({
-            jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
-            ignoreExpiration: false,
-            secretOrKey: envs.JWT_SECRET,
+            //jwtFromRequest, especifica como extraer el token de la solicitud
+            jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),   //Se usa para extraer el token del header de la solicitud
+            ignoreExpiration: false,   //Indica que no se debe ignorar la expiracion del token, si caduco, sera rechazado
+            secretOrKey: envs.JWT_SECRET,   //Se para firmar y verificar el token
         });
     }
 
+    
     /**
      * Este metodo se encarga de validar el token
      * @param payload 

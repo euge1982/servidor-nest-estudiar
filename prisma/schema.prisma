@@ -4,6 +4,13 @@
 // Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
+//schema.prisma:
+//1-Define como es la DB: es el mapa
+//2-Genera el codigo para trabajar con la DB
+//Con este mapa, prisma genera el CRUD
+//Se hace mas facil consultarla
+//3-Conecta con la DB, ya que se configura el tipo y la URL
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -28,8 +35,7 @@ model Producto {
   id          Int   @id @default(autoincrement())
   nombre      String
   descripcion String? 
-  precio      Int
-  cantidad    Int
+  imagen      String?
 
   @@map("productos")
 }

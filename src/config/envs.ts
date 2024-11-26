@@ -1,22 +1,24 @@
 //Configuramos las variables de entorno
 
-import * as joi from 'joi';
+//Este archivo se encarga d e manejar las variables de entorno
+
+import * as joi from 'joi';   //Libreria para validar datos,aca seusa para definir y validar las variables de entorno
 
 //Definimos la estructura de las variables
-interface EnvVars {
+interface EnvVars {   //Es una interfaz que describe la estructura de las variables de entorno
     PORT: number;
     DATABASE_URL: string;
     JWT_SECRET: string;
 }
 
 //Configuramos el schema de JOI
-const envsSchema = joi
+const envsSchema = joi   //envsSchema define las reglas para las variables de entorno
     .object({
         PORT: joi.number().required(),   //Se le da tipo y que es requerido
         DATABASE_URL: joi.string().required(),
         JWT_SECRET: joi.string().required(),
     })
-    .unknown(true);
+    .unknown(true);   //Indica que se permiten variables desconocidas
 
 //Se valida, puede devolver un error o las variables
 const { error, value} = envsSchema.validate(process.env);

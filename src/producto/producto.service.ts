@@ -1,12 +1,15 @@
 //Archivo de servicios de producto
 
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { CreateProductoDto } from './dto/create-producto.dto';
-import { UpdateProductoDto } from './dto/update-producto.dto';
-import { prisma } from 'src/config/database';
+//Define el servicio de productos, que contien la logica para interacturar con la DB utilizando Prisma. Es llamado desde el controlador para realizar operaciones sobre los productos
+
+import { Injectable, NotFoundException } from '@nestjs/common';   //Importa las herramientas de NestJS
+import { CreateProductoDto } from './dto/create-producto.dto';   //se importa para gestionar los datos de entrada
+import { UpdateProductoDto } from './dto/update-producto.dto';   ////se importa para gestionar los datos de entrada
+import { prisma } from 'src/config/database';   //se importa el cliete de prisma para interactuar con la DB
 
 @Injectable()
 export class ProductoService {
+
   /**
    * Crea un nuevo producto
    * @param createProductodto que es de esa clase
@@ -14,11 +17,11 @@ export class ProductoService {
    */
   async create(createProductodto: CreateProductoDto) {
     //Desestructuramos el createProductodto
-    const { nombre, descripcion, precio, cantidad } = createProductodto;
+    const { nombre, descripcion, imagen } = createProductodto;
 
     try {
       //Llamamos a la base de datos para crear el producto
-      return await prisma.producto.create( { data: { nombre, descripcion, precio, cantidad } } );
+      return await prisma.producto.create( { data: { nombre, descripcion, imagen } } );
     } 
     catch (error) {
       //Si falla, devolvemos un error
@@ -61,7 +64,7 @@ export class ProductoService {
    */
   async update(id: number, dto: UpdateProductoDto) {
     try {
-      //Llamamos al servicio para obtener el producto
+      //Llamamos al metodo findOne (que esta arriba) para obtener el producto por su id
       await this.findOne(id);
     } 
     catch (error) {
