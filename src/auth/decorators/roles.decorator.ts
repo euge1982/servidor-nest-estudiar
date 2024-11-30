@@ -1,6 +1,6 @@
 //Decorador para roles
 
-//Decorador: Es una funcion para gregar metadatos o logica adicional
+//Decorador: Es una funcion para agregar metadatos o logica adicional
 
 //Este archivo define un decorador personalizado, que permite restringir el acceso a ciertas rutas en funcion del rol del usuario
 

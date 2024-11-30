@@ -2,7 +2,7 @@
 
 //JwtStrategy es una estrategia de autenticacion basada en JWT,Esta construida usando Passport (middleware de autenticacion)
 
-import { Injectable, UnauthorizedException } from "@nestjs/common";
+import { Injectable, UnauthorizedException, InternalServerErrorException } from "@nestjs/common";
 import { envs } from "src/config";
 import { PassportStrategy } from "@nestjs/passport";
 import { ExtractJwt, Strategy } from "passport-jwt";
@@ -25,19 +25,27 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     
     /**
      * Este metodo se encarga de validar el token
-     * @param payload 
-     * @returns 
+     * @param payload Es el payload del JWT
+     * @returns El usuario correspondiente
      */
     async validate(payload: JwtPayload) {
-        //Buscamos el usuario por email del payload
-        const user = await this.userService.findByEmail(payload.email);
+        try {
+            // Buscamos el usuario por email del payload
+            const user = await this.userService.findByEmail(payload.email);
 
-        //Si el usuario no existe, devolvemos una excepcion
-        if (!user) {
-            throw new UnauthorizedException('User not found');
+            // Si el usuario no existe, devolvemos una excepción
+            if (!user) {
+                throw new UnauthorizedException('User not found');
+            }
+
+            // Devolvemos el usuario
+            return user;
+        } catch (error) {
+            // Manejo de errores inesperados
+            if (error instanceof UnauthorizedException) {
+                throw error;
+            }
+            throw new InternalServerErrorException('An error occurred during token validation');
         }
-
-        //Devolvemos el usuario
-        return user;
     }
 }

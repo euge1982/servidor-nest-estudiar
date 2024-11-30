@@ -3,6 +3,10 @@
 //Este archivo se encarga d e manejar las variables de entorno
 
 import * as joi from 'joi';   //Libreria para validar datos,aca seusa para definir y validar las variables de entorno
+import * as dotenv from 'dotenv';   //Libreria para manejar las variables de entorno
+
+//Cargamos las variables de entorno
+dotenv.config();
 
 //Definimos la estructura de las variables
 interface EnvVars {   //Es una interfaz que describe la estructura de las variables de entorno

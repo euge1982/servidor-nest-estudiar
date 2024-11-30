@@ -4,7 +4,7 @@
 
 //Delega la logica de negocio al servicio
 
-import { Controller, UnauthorizedException, Body, Post } from '@nestjs/common';
+import { Controller, UnauthorizedException, Body, Post, BadRequestException, InternalServerErrorException } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { CreateUserDto } from 'src/user/dto/create-user.dto';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
@@ -30,8 +30,17 @@ export class AuthController {
     async registerSuper(
         @Body() dto: CreateUserDto   //El cuerpo de la solicitud es del tipo CreateUserDto
         ) {
-            //Llamamos al registerSuper de AuthService
-            return this.authService.registerSuper(dto);
+            try {
+                // Llamamos al servicio de autenticación
+                return await this.authService.registerSuper(dto);
+              } 
+              catch (error) {
+                // Manejo de errores específicos según el caso
+                if (error.code === 'ER_DUP_ENTRY') {   //Si hay una entrada duplicada
+                  throw new BadRequestException('Email already exists');
+                }
+                throw new InternalServerErrorException('An error occurred while registering the user');
+              }
     }
 
 
@@ -45,16 +54,24 @@ export class AuthController {
     @ApiResponse({ status: 200, description: 'Login successful', type: String })
     @ApiResponse({ status: 401, description: 'Invalid credentials' })
     async login(@Body() dto: CreateUserDto) { 
-        //Llamamos al login de AuthService
-        const user = this.authService.login(dto);
-
-        //Si el usuario no existe, devolvemos una excepción
-        if (!user) {
-            throw new UnauthorizedException('Invalid credentials(email o password)');
+        try {
+            // Llamamos al servicio
+            const user = await this.authService.login(dto);
+      
+            // Si el usuario no existe o las credenciales son inválidas, lanzamos una excepción
+            if (!user) {
+              throw new UnauthorizedException('Invalid credentials (email o password)');
+            }
+      
+            // Devolvemos el token
+            return user;
+          } 
+          catch (error) {
+            // Manejo genérico de errores para login
+            if (error instanceof UnauthorizedException) {
+              throw error;
+            }
+            throw new InternalServerErrorException('An error occurred while logging in the user');
         }
-
-        //Devolvemos el token
-        return user;
     }
-
 }

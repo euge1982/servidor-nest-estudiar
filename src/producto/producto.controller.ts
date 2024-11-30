@@ -2,7 +2,7 @@
 
 //Maneja las rutas HTTP relacionadas con los productos
 
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, ParseIntPipe, UploadedFile, UseInterceptors } from '@nestjs/common';   //Decoradores y clases para definir y gestionar las rutas, validacion y autenticacion
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, ParseIntPipe, UploadedFile, UseInterceptors, ForbiddenException, NotFoundException } from '@nestjs/common';   //Decoradores y clases para definir y gestionar las rutas, validacion y autenticacion
 import { ProductoService } from './producto.service';   //Servicio que contiene la logica para trabajar con los productos
 import { CreateProductoDto } from './dto/create-producto.dto';  //Para gestionar los datos de entrada
 import { UpdateProductoDto } from './dto/update-producto.dto';   //Para gestionar los datos de entrada
@@ -13,6 +13,7 @@ import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags, ApiConsumes } from '
 import { FileInterceptor } from '@nestjs/platform-express';   //Para la gestion de archivos subidos
 import { diskStorage } from 'multer';
 import { extname } from 'path';
+import { Public } from 'src/auth/decorators';
 
 
 @ApiTags('Productos')   //Decorador que proporciona un grupo para las operaciones de productos en la documentacion de Swagger
@@ -28,17 +29,17 @@ export class ProductoController {
    * @returns el producto creado
    */
   @Post()   //Ruta POST /producto
-  @ApiOperation({ summary: 'Crea un producto' })
+  @ApiOperation({ summary: 'Crea un producto, solo los ADMIN y SUPER pueden hacerlo' })
   @ApiResponse({ status: 201, description: 'Producto creado' })
   @ApiResponse({ status: 403, description: 'Acceso denegado' })
   @UseInterceptors(
     FileInterceptor('imagen', {
-      storage: diskStorage({
-        destination: './uploads',
-        filename: (req, file, callback) => {
-          const unixSuffix = Date.now()+'-'+Math.round(Math.random() * 1E9);
-          const ext = extname(file.originalname);
-          const filename = `${file.fieldname}-${unixSuffix}${ext}`;
+      storage: diskStorage({   //Donde se guarda el archivo
+        destination: './uploads',   //Carpeta de destino
+        filename: (req, file, callback) => {   //Funcion para generar el nombre unico del archivo
+          const unixSuffix = Date.now()+'-'+Math.round(Math.random() * 1E9);  //Genera un id unico (Marca de tiempo y numero aleatorio (paraevitar colisiones))
+          const ext = extname(file.originalname);   //Extension del archivo original
+          const filename = `${file.fieldname}-${unixSuffix}${ext}`;   //fieldname-unixSuffix.ext
           callback(null, filename);
         },
       }),
@@ -49,42 +50,71 @@ export class ProductoController {
   async create(
     @UploadedFile() file: Express.Multer.File,   //Extrae el archivo subido y lo guarda en la carpeta uploads
     @Body() dto: CreateProductoDto) {
-      const imagePath = `uploads/${file.filename}`;
-    //Se llama al servicio para crear el producto
-    return await this.productoService.create({ ...dto, imagen: imagePath });
+      try {
+        if (!file) {
+          throw new ForbiddenException('No image uploaded');
+        }
+        const imagePath = `uploads/${file.filename}`;   //Ruta de la imagen
+        //Se llama al servicio para crear el producto
+        return await this.productoService.create({ ...dto, imagen: imagePath });
+      } 
+      catch (error) {
+        throw new ForbiddenException(error.message || 'Error creating product');
+      }
   }
+
 
   /**
    * Obtiene todos los productos, sin importar el rol
    * @returns todos los productos
    */
+  @Public()   //Ruta publica
   @Get()   //Ruta GET /producto
-  @ApiOperation({ summary: 'Obtiene todos los productos' })
+  @ApiOperation({ summary: 'Obtiene todos los productos sin necesidad de autenticacion' })
   @ApiResponse({ status: 200, description: 'Productos obtenidos' })
   @ApiResponse({ status: 403, description: 'Acceso denegado' })
-  @Roles('ADMIN', 'SUPER', 'USER')   //Accesible para todos los roles
   async findAll() {
-    //Se llama al servicio para obtener todos los productos
-    return await this.productoService.findAll();
+    try {
+      //Se llama al servicio para obtener todos los productos
+      return await this.productoService.findAll();
+    } 
+    catch (error) {
+      //En caso de error
+      throw new ForbiddenException('Error fetching products');
+    }
   }
+
 
   /**
    * Encuentra un producto por id, sin importar el rol
    * @param id el id del producto
    * @returns 
    */
+  @Public()   //Ruta publica
   @Get(':id')   //Ruta GET /producto/:id
-  @ApiOperation({ summary: 'Obtiene un producto por id' })
+  @ApiOperation({ summary: 'Obtiene un producto por id, sin necesidad de autenticacion' })
   @ApiResponse({ status: 200, description: 'Producto obtenido' })
   @ApiResponse({ status: 403, description: 'Producto no encontrado' })
-  @Roles('ADMIN', 'SUPER', 'USER')   //Accesible para todos los roles
   async findOne(@Param('id', ParseIntPipe) id: number) {
-    //Se llama al servicio para obtener el producto
-    return await this.productoService.findOne(id);
+    try {
+      //Se llama al servicio para obtener el producto
+      const product = await this.productoService.findOne(id);
+      //Si no se encuentra
+      if (!product) {
+        throw new NotFoundException('Product not found');
+      }
+      //Si se encuentra
+      return product;
+    } 
+    catch (error) {
+      //En caso de error
+      throw new NotFoundException(error.message || 'Error finding product');
+    }
   }
 
+
   /**
-   * Actualiza un producto por id
+   * Actualiza un producto por id, solo los SUPER pueden actualizar
    * @param id que es el id del producto
    * @param dto que es del tipo UpdateProductoDto
    * @returns el producto actualizado, siempre y cuando exista
@@ -96,9 +126,22 @@ export class ProductoController {
   @ApiResponse({ status: 404, description: 'Producto no encontrado' })
   @Roles('SUPER')   //Solo los SUPER pueden actualizar
   async update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateProductoDto) {
-    //Se llama al servicio para actualizar el producto
-    return await this.productoService.update(id, dto);
+    try {
+      //Se llama al servicio para actualizar el producto
+      const updatedProduct = await this.productoService.update(id, dto);
+      //Si no se encuentra
+      if (!updatedProduct) {
+        throw new NotFoundException('Product not found');
+      }
+      //Si se encuentra
+      return updatedProduct;
+    } 
+    catch (error) {
+      //En caso de error
+      throw new NotFoundException(error.message || 'Error updating product');
+    }
   }
+
 
   /**
    * Elimina un producto por id, solo los ADMIN y SUPER pueden eliminar
@@ -112,8 +155,19 @@ export class ProductoController {
   @ApiResponse({ status: 404, description: 'Producto no encontrado' })
   @Roles('ADMIN', 'SUPER')   //Solo los ADMIN y SUPER pueden eliminar
   async remove(@Param('id', ParseIntPipe) id: number) {
-    //Se llama al servicio para eliminar el producto
-    return await this.productoService.remove(id);
+    try {
+      //Se llama al servicio para eliminar el producto
+      const removedProduct = await this.productoService.remove(id);
+      //Si no se encuentra
+      if (!removedProduct) {
+        throw new NotFoundException('Product not found');
+      }
+      //Si se encuentra
+      return { message: 'Product successfully deleted' };
+    } 
+    catch (error) {
+      //En caso de error
+      throw new NotFoundException(error.message || 'Error deleting product');
+    }
   }
-
 }

@@ -11,6 +11,7 @@ let prisma: PrismaClient;   // Variable para almacenar la instancia
 //Se usa para garantizar que todas las operaciones de DB usen la misma conexion
 
 try {
+    //Crea una nueva instancia de Prisma
     prisma = new PrismaClient();   //Inicia una conexion con la DB segun lo definido el el schema.prisma
 } 
 catch (error) {
@@ -18,4 +19,4 @@ catch (error) {
     process.exit(1); // Termina el proceso si no se puede conectar
 }
 
-export { prisma };
+export { prisma };   // Exporta la instancia de Prisma
